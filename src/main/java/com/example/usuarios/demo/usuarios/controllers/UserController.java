@@ -1,5 +1,6 @@
 package com.example.usuarios.demo.usuarios.controllers;
 
+import com.example.usuarios.demo.usuarios.exceptions.ServicesException;
 import com.example.usuarios.demo.usuarios.models.entities.User;
 import com.example.usuarios.demo.usuarios.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,32 +18,34 @@ public class UserController {
     UserService userService;
 
     @GetMapping
-    public List<User> getAll(){
+    public List<User> getAll() {
         return userService.findAll();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> findById(@PathVariable Long id){
-        Optional<User> userOptional = userService.findById(id);
-
-        return userOptional.isPresent() ? ResponseEntity.ok(userOptional.get()) : ResponseEntity.noContent().build();
+    public ResponseEntity<?> findById(@PathVariable Long id) {
+        try {
+            return userService.findById(id);
+        } catch (ServicesException ex) {
+            return new ResponseEntity<>(new ServicesException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al realizar la peticion",
+                    "no se pudo realizar la busqueda"), null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
     }
 
     @PostMapping
-    public ResponseEntity<?>  create(@RequestBody User user){
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.save(user));
+    public ResponseEntity<?> create(@RequestBody User user) throws ServicesException {
+        return userService.save(user);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> update(@RequestBody User user) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(userService.update(user));
-        //TODO: agregar manejo de excepciones
+        return userService.update(user);
+
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> remove(@PathVariable Long id) {
-        userService.remove(id);
-        return (ResponseEntity<?>) ResponseEntity.ok();
+       return userService.remove(id);
     }
 }

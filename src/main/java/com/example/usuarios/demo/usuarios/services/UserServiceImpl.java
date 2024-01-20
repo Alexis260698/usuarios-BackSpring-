@@ -1,8 +1,10 @@
 package com.example.usuarios.demo.usuarios.services;
 
+import com.example.usuarios.demo.usuarios.exceptions.ServicesException;
 import com.example.usuarios.demo.usuarios.models.entities.User;
 import com.example.usuarios.demo.usuarios.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,51 +26,104 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<User> findById(Long id) {
-        return userRepository.findById(id);
-    }
-
-    @Override
-    @Transactional
-    public User save(User user) {
-        return userRepository.save(user);
-    }
-
-    @Override
-    @Transactional
-    public void remove(Long id) {
-        Optional<User> userToRemove = findById(id);
-
-        if (userToRemove.isPresent()) {
-            userRepository.deleteById(id);
-        }else{
-            //TODO: lanzar excepcion de que no se encontro 204
-        }
-    }
-
-    @Override
-    @Transactional
-    public User update(User user) {
-        if(isValidUser(user)){
-            Optional<User> userDb = this.findById(user.getId());
-
-            if (userDb.isPresent()) {
-                userDb.get().setUsername(user.getUsername());
-                userDb.get().setEmail(user.getEmail());
-                return save(userDb.get());
+    public ResponseEntity<?>  findById(Long id) throws ServicesException {
+        try {
+            Optional<User> userOptional = userRepository.findById(id);
+            if(userOptional.isPresent()){
+                return ResponseEntity.ok(userOptional.get());
             }else{
-                //TODO:lanzar excepcion de que no se encontro ese usuario
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
             }
+        }catch (Exception ex){
+            throw new ServicesException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al realizar la peticion",
+                    "no se pudo realizar la busqueda");
+        }
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<?> save(User user) throws ServicesException {
+
+        try {
+            if(IsObjectValid(user, "CREATE")){
+                return ResponseEntity.ok(userRepository.save(user));
+            }else{
+                return new ResponseEntity<>(new ServicesException(HttpStatus.BAD_REQUEST, "Error al realizar la peticion",
+                        "no se permiten datos vacios"), null, HttpStatus.BAD_REQUEST);
+            }
+        }catch (Exception ex){
+            return new ResponseEntity<>(new ServicesException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al realizar la peticion",
+                    "no se pudo Crear el objeto"), null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    public boolean IsObjectValid(User user, String action){
+        switch (action){
+            case "CREATE":
+                if(user.getEmail().isEmpty() || user.getUsername().isEmpty() || user.getPassword().isEmpty()){
+                    return false;
+                }else{
+                    return true;
+                }
+            case "UPDATE":
+                if(user.getEmail().isEmpty() || user.getUsername().isEmpty()){
+                    return false;
+                }else{
+                    return true;
+                }
+            default:
+                return false;
+        }
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<?> remove(Long id) {
+
+
+        try{
+            Optional<User> userToRemove = userRepository.findById(id);
+
+            if (userToRemove.isPresent()) {
+                userRepository.deleteById(id);
+                return ResponseEntity.ok("Se elimin\u00F3 con \u00E9xito el usuario.");
+            }else{
+                return new ResponseEntity<>(new ServicesException(HttpStatus.NO_CONTENT, "Error al realizar la peticion",
+                        "no se encontro el usuario"), null, HttpStatus.NO_CONTENT);
+            }
+        }catch (Exception ex){
+            return new ResponseEntity<>(new ServicesException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al realizar la peticion",
+                    "Error al eliminar"), null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        //TODO:lanzar excepcion de que no viene el id
-
-        return null;
     }
 
-    public boolean isValidUser(User user){
-        return true;
+    @Override
+    @Transactional
+    public ResponseEntity<?>  update(User user) {
+        try {
+            if(IsObjectValid(user,"UPDATE")){
+                Optional<User> userDb = userRepository.findById(user.getId());
+
+                if (userDb.isPresent()) {
+                    userDb.get().setUsername(user.getUsername());
+                    userDb.get().setEmail(user.getEmail());
+                    return ResponseEntity.ok(userRepository.save(user));
+                }else{
+                    return new ResponseEntity<>(new ServicesException(HttpStatus.NO_CONTENT, "Error al realizar la peticion",
+                            "no se encontro el usuario"), null, HttpStatus.NO_CONTENT);
+                }
+            }else{
+                return new ResponseEntity<>(new ServicesException(HttpStatus.BAD_REQUEST, "Error al realizar la peticion",
+                        "no se permiten datos vacios"), null, HttpStatus.BAD_REQUEST);
+            }
+        }catch (Exception ex){
+            return new ResponseEntity<>(new ServicesException(HttpStatus.INTERNAL_SERVER_ERROR, "Error al realizar la peticion",
+                    "no se pudo Actualizar el objeto"), null, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
+
+
 
 
 }

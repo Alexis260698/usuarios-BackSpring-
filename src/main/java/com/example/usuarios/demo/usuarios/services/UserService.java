@@ -1,19 +1,21 @@
 package com.example.usuarios.demo.usuarios.services;
 
+import com.example.usuarios.demo.usuarios.exceptions.ServicesException;
 import com.example.usuarios.demo.usuarios.models.entities.User;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface UserService {
     List<User> findAll();
-    Optional<User> findById(Long id);
+    ResponseEntity<?> findById(Long id) throws ServicesException;
 
-    User save(User user);
+    ResponseEntity<?> save(User user) throws ServicesException;
 
-    void remove(Long id);
+    ResponseEntity<?> remove(Long id);
 
-    User update(User user);
+    ResponseEntity<?>  update(User user);
 
 
 }
